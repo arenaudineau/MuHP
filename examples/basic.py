@@ -27,7 +27,9 @@ train_loader = torch.utils.data.DataLoader(
     shuffle=True,
 )
 
-model = nn.Sequential(nn.Flatten(), nn.Linear(28 * 28, 48), nn.Linear(48, 10))
+model = nn.Sequential(
+    nn.Flatten(), nn.Linear(28 * 28, 48), nn.ReLU(), nn.Linear(48, 10)
+)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = HP.OPTIMIZER(model.parameters(), lr=HP.LEARNING_RATE)
