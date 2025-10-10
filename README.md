@@ -64,13 +64,16 @@ for epoch in HP.lapsed(range(HP.N_EPOCHS)):
 will result in the outputs:
 ```
 muhp
-└── my_experiments
+└── my_experiment
     ├── config.json
     ├── metrics_lapse_final.npz
+    ├── gitdiff.patch
     └── _completed_sentinel
 ```
 
-with: `config.json`:
+with:
+
+- `config.json`:
 ```json
 {
   "KEY": 1234,
@@ -81,17 +84,37 @@ with: `config.json`:
 }
 ```
 
-and `metrics_lapse_final.npz`:
-```
+- `metrics_lapse_final.npz`:
+```json
 {
-'loss':
+"loss":
     shape: (5,)
     [0.59373546 0.1961537  0.31670108 0.45723966 0.1811399 ]
 
-'accuracy':
+"accuracy":
     shape: (5,)
     [0.81868333 0.8942     0.90448333 0.90948333 0.91303333]
 }
 ```
 
-`_completed_sentinel` is an empty file.
+- `gitdiff.patch`: providing you run your simulation in a folder with a `.git` directory, the last commit hash and diffs are also stored to be able to retrieve exactly the code used for running.
+```diff
+# current-commit: 5040a6ba3026f29ea2981a25e0c9d87c73cb5828
+
+diff --git a/src/muhp/__init__.py b/src/muhp/__init__.py
+index cd57eb4..2697d2e 100644
+--- a/src/muhp/__init__.py
++++ b/src/muhp/__init__.py
+@@ -46,7 +46,7 @@ class MuHP:
+                 .decode("ascii")
+                 .strip()
+             )
+-            git_diff = subprocess.check_output(["git", "diff"]).decode("ascii").strip()
++            git_diff = subprocess.check_output(["git", "diff"]).decode("ascii")
+ 
+             with open(self.path / "gitdiff.patch", "w") as f:
+                 f.write("# current-commit: " + git_commit_hash + "\n\n")
+
+```
+
+- `_completed_sentinel`: empty file used to assess the completion of a run, for error recovery.

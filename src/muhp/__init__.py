@@ -46,7 +46,7 @@ class MuHP:
                 .decode("ascii")
                 .strip()
             )
-            git_diff = subprocess.check_output(["git", "diff"]).decode("ascii").strip()
+            git_diff = subprocess.check_output(["git", "diff"]).decode("ascii")
 
             with open(self.path / "gitdiff.patch", "w") as f:
                 f.write("# current-commit: " + git_commit_hash + "\n\n")
