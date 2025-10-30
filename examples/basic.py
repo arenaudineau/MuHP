@@ -19,7 +19,7 @@ HP = MuHP(
 
 torch.manual_seed(HP.KEY)
 
-# config can still be later on modified, before starting actual training or in-between
+# config can still be later on modified, before starting actual training
 HP.OPTIMIZER = optim.SGD
 
 train_loader = torch.utils.data.DataLoader(

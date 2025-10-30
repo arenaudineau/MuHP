@@ -71,6 +71,11 @@ class MuHP:
             )
 
     def lapse(self):
+        if self._lapse_idx < 0:
+            raise ValueError(
+                "Experiment already ran, please create a new MuHP instance"
+            )
+
         for k in self._lapse_metrics.keys():
             v = self._metrics[k]
             if isinstance(v, np.ndarray):
@@ -108,7 +113,7 @@ class MuHP:
             **self.metrics,
             allow_pickle=False,
         )
-        self._lapse_idx = None
+        self._lapse_idx = -1
         with open(self.path / "_completed_sentinel", "w"):
             pass
 
@@ -130,7 +135,7 @@ class MuHP:
         self._update_json_config()
 
     def _update_json_config(self):
-        if self._lapse_idx is None or self._lapse_idx != 0:
+        if self._lapse_idx != 0:
             raise ValueError("Cannot change the configuration once the run has started")
 
         printable_config = {
@@ -157,6 +162,11 @@ class _MuHPGenerator:
     ):
         self.instance = instance
         self.iter = enumerate(it)
+
+        if self.instance._lapse_idx < 0:
+            raise ValueError(
+                "Experiment already ran, please create a new MuHP instance"
+            )
 
         if isinstance(it, Sized):
             self.instance._lapse_count = len(it) // step_size + int(with_init)
