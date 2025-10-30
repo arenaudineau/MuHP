@@ -25,7 +25,7 @@ HP = MuHP(
 torch.manual_seed(HP.KEY)
 
 # config can still be later on modified, before starting actual training or in-between
-HP.config = HP.config | dict(OPTIMIZER=optim.SGD)
+HP.OPTIMIZER = optim.SGD
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST(".", train=True, download=True, transform=transforms.ToTensor()),
@@ -43,7 +43,7 @@ optimizer = HP.OPTIMIZER(model.parameters(), lr=HP.LEARNING_RATE)
 for epoch in (pbar := tqdm(HP.lapsed(range(HP.N_EPOCHS)))):
     total_correct, total_samples = 0, 0
 
-    # HP.config = HP.config | dict(LEARNING_RATE=1)  # Disallowed
+    # HP.LEARNING_RATE = 1. # Disallowed
     for x, y in train_loader:
         optimizer.zero_grad()
         outputs = model(x)

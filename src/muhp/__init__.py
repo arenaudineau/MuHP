@@ -122,14 +122,16 @@ class MuHP:
 
     @property
     def config(self):
-        return self._config if self._lapse_idx == 0 else MappingProxyType(self._config)
+        return MappingProxyType(self._config)
 
     @config.setter
     def config(self, conf):
-        if self._lapse_idx != 0:
-            raise ValueError("Cannot change the configuration once the run has started")
-
         self._config = conf
+        self._update_json_config()
+
+    def _update_json_config(self):
+        if self._lapse_idx is None or self._lapse_idx != 0:
+            raise ValueError("Cannot change the configuration once the run has started")
 
         printable_config = {
             k: v.__qualname__ if isinstance(v, type) else v
@@ -139,15 +141,14 @@ class MuHP:
             json.dump(printable_config, f, indent=2)
 
     def __getattr__(self, x):
-        return self.config[x]
+        return self.config.get(x)
 
     def __setattr__(self, name, v):
         if name in ["config", "path", "name"] or name[0] == "_":
             super().__setattr__(name, v)
         else:
-            raise ValueError(
-                f"Cannot change hyperparameters by setting attribute, please use `hp.config = hp.config | dict({name}={v})`."
-            )
+            self._config[name] = v
+            self._update_json_config()
 
 
 class _MuHPGenerator:
