@@ -4,6 +4,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 
 from muhp import MuHP
+from tqdm import tqdm
 
 HP = MuHP(
     name="my_experiment",
@@ -34,7 +35,7 @@ model = nn.Sequential(
 criterion = nn.CrossEntropyLoss()
 optimizer = HP.OPTIMIZER(model.parameters(), lr=HP.LEARNING_RATE)
 
-for epoch in HP.lapsed(range(HP.N_EPOCHS)):
+for epoch in (pbar := tqdm(HP.lapsed(range(HP.N_EPOCHS)))):
     total_correct, total_samples = 0, 0
 
     # HP.config = HP.config | dict(LEARNING_RATE=1)  # Disallowed
@@ -51,6 +52,5 @@ for epoch in HP.lapsed(range(HP.N_EPOCHS)):
 
     HP.log("loss", loss.detach())
     HP.log("accuracy", total_correct / total_samples)
-    print(
-        f"Epoch {epoch+1}, loss = {loss.item():.4f}, acc = {total_correct/total_samples*100:.2f}"
-    )
+
+    pbar.set_postfix(HP.lapse_metrics)
