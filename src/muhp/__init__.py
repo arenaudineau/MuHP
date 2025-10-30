@@ -12,7 +12,7 @@ import subprocess
 class MuHP:
     _config: dict[str, Any] = {}
 
-    _lapse_buffer: dict[str, Any] = {}
+    _lapse_metrics: dict[str, Any] = {}
     _metrics: dict[str, Sequence] = {}
 
     _lapse_idx: int = 0
@@ -55,13 +55,13 @@ class MuHP:
         self.config = config
 
     def log(self, name, value):
-        if self._lapse_buffer.get(name) is not None:
+        if self._lapse_metrics.get(name) is not None:
             raise ValueError(
-                f"Multiple '{name}' for the same lapse. Previously stored value: {self._lapse_buffer[name]}"
+                f"Multiple '{name}' for the same lapse. Previously stored value: {self._lapse_metrics[name]}"
             )
 
         value = np.asarray(value)
-        self._lapse_buffer[name] = value
+        self._lapse_metrics[name] = value
 
         if name not in self._metrics:
             self._metrics[name] = (
@@ -71,14 +71,14 @@ class MuHP:
             )
 
     def lapse(self):
-        for k in self._lapse_buffer.keys():
+        for k in self._lapse_metrics.keys():
             v = self._metrics[k]
             if isinstance(v, np.ndarray):
-                v[self._lapse_idx] = self._lapse_buffer[k]
+                v[self._lapse_idx] = self._lapse_metrics[k]
             else:
-                v.append(self._lapse_buffer[k])
+                v.append(self._lapse_metrics[k])
 
-            self._lapse_buffer[k] = None
+            self._lapse_metrics[k] = None
 
         self._lapse_idx += 1
 
@@ -115,6 +115,10 @@ class MuHP:
     @property
     def metrics(self):
         return MappingProxyType(self._metrics)
+
+    @property
+    def lapse_metrics(self):
+        return MappingProxyType(self._lapse_metrics)
 
     @property
     def config(self):
