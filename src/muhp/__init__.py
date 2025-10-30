@@ -23,7 +23,7 @@ class MuHP:
         self.name = name or input("Please give a name for the run: ")
 
         self.path = Path(f"./muhp/{self.name}")
-        if self.path.exists():
+        if self.path.exists() and self.name != "!dbg":
             if (self.path / "_completed_sentinel").exists():
                 raise ValueError(f"Already completed run {self.name}")
 
