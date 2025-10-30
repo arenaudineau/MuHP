@@ -98,18 +98,9 @@ class MuHP:
             )
 
     def lapsed(self, iter: Iterable, *, size=None, step_size=1, with_init=False):
-        if isinstance(iter, Sized):
-            self._lapse_count = len(iter) // step_size + int(with_init)
-        elif size is not None:
-            self._lapse_count = size // step_size + int(with_init)
-
-        for i, x in enumerate(iter):
-            yield x
-
-            if (i + 1) % step_size == 0 or (with_init and i == 0):
-                self.lapse()
-
-        self._lapse_count = None
+        return _MuHPGenerator(
+            self, iter, size=size, step_size=step_size, with_init=with_init
+        )
 
     def finalize(self):
         np.savez_compressed(
@@ -153,3 +144,33 @@ class MuHP:
             raise ValueError(
                 f"Cannot change hyperparameters by setting attribute, please use `hp.config = hp.config | dict({name}={v})`."
             )
+
+
+class _MuHPGenerator:
+    def __init__(
+        self, instance: MuHP, it: Iterable, size=None, step_size=1, with_init=False
+    ):
+        self.instance = instance
+        self.iter = enumerate(it)
+
+        if isinstance(it, Sized):
+            self.instance._lapse_count = len(it) // step_size + int(with_init)
+            self.size = len(it)
+        elif size is not None:
+            self.instance._lapse_count = size // step_size + int(with_init)
+            self.size = size
+
+        self.step_size = step_size
+        self.with_init = with_init
+
+    def __iter__(self):
+        for i, x in self.iter:
+            yield x
+
+            if (i + 1) % self.step_size == 0 or (self.with_init and i == 0):
+                self.instance.lapse()
+
+        self._lapse_count = None
+
+    def __len__(self):
+        return self.size
