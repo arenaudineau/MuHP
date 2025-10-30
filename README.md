@@ -9,6 +9,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 
 from muhp import MuHP
+from tqdm import tqdm
 
 HP = MuHP(
     name="my_experiment",
@@ -39,7 +40,7 @@ model = nn.Sequential(
 criterion = nn.CrossEntropyLoss()
 optimizer = HP.OPTIMIZER(model.parameters(), lr=HP.LEARNING_RATE)
 
-for epoch in HP.lapsed(range(HP.N_EPOCHS)):
+for epoch in (pbar := tqdm(HP.lapsed(range(HP.N_EPOCHS)))):
     total_correct, total_samples = 0, 0
 
     # HP.config = HP.config | dict(LEARNING_RATE=1)  # Disallowed
@@ -56,9 +57,8 @@ for epoch in HP.lapsed(range(HP.N_EPOCHS)):
 
     HP.log("loss", loss.detach())
     HP.log("accuracy", total_correct / total_samples)
-    print(
-        f"Epoch {epoch+1}, loss = {loss.item():.4f}, acc = {total_correct/total_samples*100:.2f}"
-    )
+
+    pbar.set_postfix(HP.lapse_metrics)
 ```
 
 will result in the outputs:
@@ -87,13 +87,8 @@ with:
 - `metrics_lapse_final.npz`:
 ```json
 {
-"loss":
-    shape: (5,)
-    [0.59373546 0.1961537  0.31670108 0.45723966 0.1811399 ]
-
-"accuracy":
-    shape: (5,)
-    [0.81868333 0.8942     0.90448333 0.90948333 0.91303333]
+    "loss": [0.59373546, 0.1961537, 0.31670108, 0.45723966, 0.1811399 ],
+    "accuracy": [0.81868333, 0.8942, 0.90448333, 0.90948333, 0.91303333]
 }
 ```
 
