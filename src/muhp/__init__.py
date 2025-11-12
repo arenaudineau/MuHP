@@ -8,6 +8,8 @@ import os
 import shutil
 import subprocess
 
+__all__ = ["MuHP"]
+
 
 class MuHP:
     _config: dict[str, Any] = {}
@@ -23,7 +25,7 @@ class MuHP:
         self.name = name or input("Please give a name for the run: ")
 
         self.path = Path(f"./muhp/{self.name}")
-        if self.path.exists() and self.name != "!dbg":
+        if self.path.exists() and not self.name.startswith("!"):
             if (self.path / "_completed_sentinel").exists():
                 raise ValueError(f"Already completed run {self.name}")
 
@@ -46,7 +48,7 @@ class MuHP:
                 .decode("ascii")
                 .strip()
             )
-            git_diff = subprocess.check_output(["git", "diff"]).decode("ascii")
+            git_diff = subprocess.check_output(["git", "diff"]).decode()
 
             with open(self.path / "gitdiff.patch", "w") as f:
                 f.write("# current-commit: " + git_commit_hash + "\n\n")
