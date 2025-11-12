@@ -147,15 +147,21 @@ class MuHP:
         with open(self.path / "config.json", "w") as f:
             json.dump(printable_config, f, indent=2)
 
-    def __getattr__(self, x):
+    def __getitem__(self, x):
         return self.config.get(x)
+
+    def __setitem__(self, name, v):
+        self._config[name] = v
+        self._update_json_config()
+
+    def __getattr__(self, x):
+        return self[x]
 
     def __setattr__(self, name, v):
         if name in ["config", "path", "name"] or name[0] == "_":
             super().__setattr__(name, v)
         else:
-            self._config[name] = v
-            self._update_json_config()
+            self[name] = v
 
 
 class _MuHPGenerator:
