@@ -1,7 +1,7 @@
 import numpy as np
 import json
 
-from typing import Any, Iterable, Sized, Sequence
+from typing import Any, Iterable, Sized, Sequence, Literal
 from types import MappingProxyType
 from pathlib import Path
 import os
@@ -21,40 +21,54 @@ class MuHP:
     _lapse_count: int | None = None
     _save_frequency: int = 0
 
-    def __init__(self, name: str | None = None, config: dict[str, Any] = {}):
+    def __init__(
+        self, name: str | None = None, config: dict[str, Any] | Literal["load"] = {}
+    ):
         self.name = name or input("Please give a name for the run: ")
 
         self.path = Path(f"./muhp/{self.name}")
-        if self.path.exists() and not self.name.startswith("!"):
-            if (self.path / "_completed_sentinel").exists():
-                raise ValueError(f"Already completed run {self.name}")
 
-            content = [
-                (self.path / elem, self.path / "_backup" / elem)
-                for elem in os.listdir(self.path)
-            ]
+        if config == "load":
+            if (
+                not self.path.exists()
+                or not (self.path / "_completed_sentinel").exists()
+            ):
+                raise ValueError(f"Trying to load non-completed run '{self.name}'")
 
-            (self.path / "_backup").mkdir()
-            for src, dst in content:
-                if src.is_dir():
-                    dst.mkdir(parents=True)
-                shutil.move(src, dst)
+            with open(self.path / "config.json", "r") as f:
+                self.config = json.load(f)
+            self._lapse_idx = -1  # Already completed run
+        else:
+            if self.path.exists() and not self.name.startswith("!"):
+                if (self.path / "_completed_sentinel").exists():
+                    raise ValueError(f"Already completed run '{self.name}'")
 
-        self.path.mkdir(parents=True, exist_ok=True)
+                content = [
+                    (self.path / elem, self.path / "_backup" / elem)
+                    for elem in os.listdir(self.path)
+                ]
 
-        if Path(".git").exists():
-            git_commit_hash = (
-                subprocess.check_output(["git", "rev-parse", "HEAD"])
-                .decode("ascii")
-                .strip()
-            )
-            git_diff = subprocess.check_output(["git", "diff"]).decode()
+                (self.path / "_backup").mkdir()
+                for src, dst in content:
+                    if src.is_dir():
+                        dst.mkdir(parents=True)
+                    shutil.move(src, dst)
 
-            with open(self.path / "gitdiff.patch", "w") as f:
-                f.write("# current-commit: " + git_commit_hash + "\n\n")
-                f.write(git_diff)
+            self.path.mkdir(parents=True, exist_ok=True)
 
-        self.config = config
+            if Path(".git").exists():
+                git_commit_hash = (
+                    subprocess.check_output(["git", "rev-parse", "HEAD"])
+                    .decode("ascii")
+                    .strip()
+                )
+                git_diff = subprocess.check_output(["git", "diff"]).decode()
+
+                with open(self.path / "gitdiff.patch", "w") as f:
+                    f.write("# current-commit: " + git_commit_hash + "\n\n")
+                    f.write(git_diff)
+
+            self.config = config
 
     def log(self, name, value):
         if self._lapse_metrics.get(name) is not None:
