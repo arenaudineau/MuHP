@@ -70,7 +70,28 @@ class MuHP:
 
             self.config = config
 
-    def log(self, name, value):
+    def log(self, name, value, *, list_to_multiple_logs=False):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                self.log(
+                    name + "." + str(k),
+                    v,
+                    list_to_multiple_logs=list_to_multiple_logs + 1,
+                )
+
+            return
+
+        elif list_to_multiple_logs and isinstance(value, list):
+            if isinstance(list_to_multiple_logs, int):
+                list_to_multiple_logs -= 1
+
+            for k, v in enumerate(value):
+                self.log(
+                    name + "." + str(k), v, list_to_multiple_logs=list_to_multiple_logs
+                )
+
+            return
+
         if self._lapse_metrics.get(name) is not None:
             raise ValueError(
                 f"Multiple '{name}' for the same lapse. Previously stored value: {self._lapse_metrics[name]}"
