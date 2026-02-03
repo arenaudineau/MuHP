@@ -212,7 +212,7 @@ class MuHP:
                 return v.__qualname__
             elif isinstance(v, partial):
                 inner = v.func.__qualname__
-                args = signature(v.func).bind(*v.args, **v.keywords).arguments
+                args = signature(v.func).bind_partial(*v.args, **v.keywords).arguments
                 args_str = [f"{k}={v}" for k, v in args.items()]
                 return f"{inner}({', '.join(args_str)})"
             elif isinstance(v, Callable):
