@@ -1,32 +1,34 @@
 import numpy as np
+from numpy import ma
 import json
 
-from typing import Any, Iterable, Sized, Sequence, Literal
+from typing import Any, Callable, Iterable, Sized, Sequence, Literal
 from types import MappingProxyType
 from pathlib import Path
 import os
 import shutil
 import subprocess
+from functools import partial
+from inspect import signature
 
 __all__ = ["MuHP"]
 
 
 class MuHP:
-    _config: dict[str, Any] = {}
-
-    _lapse_metrics: dict[str, Any] = {}
-    _metrics: dict[str, Sequence] = {}
-
-    _lapse_idx: int = 0
-    _lapse_count: int | None = None
-    _save_frequency: int = 0
-
     def __init__(
         self, name: str | None = None, config: dict[str, Any] | Literal["load"] = {}
     ):
         self.name = name or input("Please give a name for the run: ")
 
         self.path = Path(f"./muhp/{self.name}")
+
+        self._lapse_metrics: dict[str, Any] = {}
+        self._metrics: dict[str, Sequence] = {}
+        self._latest_stored_metrics: dict[str, int] = {}
+
+        self._lapse_idx: int = 0
+        self._lapse_count: int | None = None
+        self._save_frequency: int = 0
 
         if config == "load":
             if (
@@ -99,12 +101,16 @@ class MuHP:
 
         value = np.asarray(value)
         self._lapse_metrics[name] = value
+        self._latest_stored_metrics[name] = self._lapse_idx
 
         if name not in self._metrics:
             self._metrics[name] = (
                 []
                 if self._lapse_count is None
-                else np.empty((self._lapse_count,) + value.shape, dtype=value.dtype)
+                else ma.array(
+                    np.empty((self._lapse_count,) + value.shape, dtype=value.dtype),
+                    mask=True,
+                )
             )
 
     def lapse(self):
@@ -114,6 +120,9 @@ class MuHP:
             )
 
         for k in self._lapse_metrics.keys():
+            if self._lapse_metrics[k] is None:
+                continue
+
             v = self._metrics[k]
             if isinstance(v, np.ndarray):
                 v[self._lapse_idx] = self._lapse_metrics[k]
@@ -133,11 +142,8 @@ class MuHP:
                 if self._lapse_count is None
                 else f"{self._lapsed_idx}-{self._lapse_count}"
             )
-            np.savez_compressed(
-                self.path / f"metrics_lapse_{fmt}",
-                **self.metrics,
-                allow_pickle=False,
-            )
+
+            self._save_metrics(self.path / f"metrics_lapse_{fmt}")
 
     def lapsed(self, iter: Iterable, *, size=None, step_size=1, with_init=False):
         return _MuHPGenerator(
@@ -145,11 +151,7 @@ class MuHP:
         )
 
     def finalize(self):
-        np.savez_compressed(
-            self.path / "metrics_lapse_final",
-            **self.metrics,
-            allow_pickle=False,
-        )
+        self._save_metrics(self.path / "metrics_lapse_final")
         self._lapse_idx = -1
         with open(self.path / "_completed_sentinel", "w"):
             pass
@@ -163,6 +165,24 @@ class MuHP:
         return MappingProxyType(self._lapse_metrics)
 
     @property
+    def latest_metrics(self):
+        def _get(k):
+            if self._lapse_metrics[k] is None:
+                v = self._metrics[k]
+                if isinstance(v, np.ndarray):
+                    v = v[~v.mask]
+
+                if len(v) == 0:
+                    v = None
+                else:
+                    v = np.asarray(v[-1])
+            else:
+                v = self._lapse_metrics[k]
+            return v
+
+        return MappingProxyType({k: _get(k) for k in self._lapse_metrics.keys()})
+
+    @property
     def config(self):
         return MappingProxyType(self._config)
 
@@ -171,14 +191,39 @@ class MuHP:
         self._config = conf
         self._update_json_config()
 
+    @property
+    def lapse_count(self):
+        return self._lapse_count
+
+    def _save_metrics(self, path):
+        def _unmask(x):
+            if isinstance(x, ma.MaskedArray):
+                return x[~x.mask]
+            else:
+                return x
+
+        np.savez_compressed(
+            path, **{k: _unmask(v) for k, v in self.metrics.items()}, allow_pickle=False
+        )
+
     def _update_json_config(self):
+        def value_to_printable(v):
+            if isinstance(v, type):
+                return v.__qualname__
+            elif isinstance(v, partial):
+                inner = v.func.__qualname__
+                args = signature(v.func).bind(*v.args, **v.keywords).arguments
+                args_str = [f"{k}={v}" for k, v in args.items()]
+                return f"{inner}({', '.join(args_str)})"
+            elif isinstance(v, Callable):
+                return v.__qualname__
+            else:
+                return v
+
         if self._lapse_idx != 0:
             raise ValueError("Cannot change the configuration once the run has started")
 
-        printable_config = {
-            k: v.__qualname__ if isinstance(v, type) else v
-            for k, v in self._config.items()
-        }
+        printable_config = {k: value_to_printable(v) for k, v in self._config.items()}
         with open(self.path / "config.json", "w") as f:
             json.dump(printable_config, f, indent=2)
 

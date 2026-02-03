@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "muhp"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="Adrien Renaudineau", email="adrien.renaudineau@universite-paris-saclay.fr" },
 ]
