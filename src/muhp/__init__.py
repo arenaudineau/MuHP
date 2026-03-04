@@ -28,7 +28,7 @@ class MuHP:
 
         self._lapse_idx: int = 0
         self._lapse_count: int | None = None
-        self._save_frequency: int = 0
+        self.save_frequency: int = 0
 
         if config == "load":
             if (
@@ -136,14 +136,8 @@ class MuHP:
         if self._lapse_count is not None and self._lapse_idx == self._lapse_count:
             self.finalize()
 
-        elif self._save_frequency != 0 and self._lapse_idx % self._save_frequency == 0:
-            fmt = (
-                str(self._lapse_idx)
-                if self._lapse_count is None
-                else f"{self._lapsed_idx}-{self._lapse_count}"
-            )
-
-            self._save_metrics(self.path / f"metrics_lapse_{fmt}")
+        elif self.save_frequency != 0 and self._lapse_idx % self.save_frequency == 0:
+            self._save_metrics(self.path / "metrics_lapse_running")
 
     def lapsed(self, iter: Iterable, *, size=None, step_size=1, with_init=False):
         return _MuHPGenerator(
@@ -198,12 +192,14 @@ class MuHP:
     def _save_metrics(self, path):
         def _unmask(x):
             if isinstance(x, ma.MaskedArray):
+                if np.issubdtype(x.dtype, np.floating):
+                    return x.filled(np.nan)
                 return x[~x.mask]
             else:
                 return x
 
         np.savez_compressed(
-            path, **{k: _unmask(v) for k, v in self.metrics.items()}, allow_pickle=False
+            path, **{k: _unmask(v) for k, v in self.metrics.items()}, allow_pickle=True
         )
 
     def _update_json_config(self):
@@ -238,7 +234,7 @@ class MuHP:
         return self[x]
 
     def __setattr__(self, name, v):
-        if name in ["config", "path", "name"] or name[0] == "_":
+        if name in ["config", "path", "name", "save_frequency"] or name[0] == "_":
             super().__setattr__(name, v)
         else:
             self[name] = v
