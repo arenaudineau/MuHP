@@ -41,7 +41,7 @@ class MuHP:
                 self.config = json.load(f)
             self._lapse_idx = -1  # Already completed run
         else:
-            if self.path.exists() and not self.name.startswith("!"):
+            if self.path.exists() and not self.path.stem.startswith("!"):
                 if (self.path / "_completed_sentinel").exists():
                     raise ValueError(f"Already completed run '{self.name}'")
 
@@ -194,7 +194,9 @@ class MuHP:
             if isinstance(x, ma.MaskedArray):
                 if np.issubdtype(x.dtype, np.floating):
                     return x.filled(np.nan)
-                return x[~x.mask]
+                elif not x.mask.any():
+                    return np.asarray(x)
+                return x
             else:
                 return x
 
